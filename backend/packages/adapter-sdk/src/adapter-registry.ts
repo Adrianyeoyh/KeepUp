@@ -37,6 +37,15 @@ export class AdapterRegistry {
     return Array.from(this.adapters.keys());
   }
 
+  unregister(provider: ExtendedProviderName): boolean {
+    return this.adapters.delete(provider);
+  }
+
+  /** Clear all registered adapters (for testing). */
+  reset(): void {
+    this.adapters.clear();
+  }
+
   /**
    * Execute an outbound action by routing to the correct adapter.
    * This is the primary entry point for consumers.

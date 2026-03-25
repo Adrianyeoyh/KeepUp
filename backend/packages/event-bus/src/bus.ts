@@ -157,10 +157,18 @@ export class EventBus {
   ): Promise<void> {
     const queue = this.getOrCreateQueue(topic);
 
+    // Validate payload (same as publish)
+    const schema = EventPayloadSchemas[topic] as z.ZodSchema;
+    const parsed = schema.safeParse(payload);
+    if (!parsed.success) {
+      this.logger.error({ topic, errors: parsed.error.issues }, 'Scheduled payload validation failed');
+      throw new Error(`Invalid payload for scheduled topic ${topic}: ${parsed.error.message}`);
+    }
+
     const envelope: EventEnvelope<EventPayloadMap[T]> = {
       id: options.jobId,
       topic,
-      payload,
+      payload: parsed.data,
       timestamp: new Date(),
       source: this.serviceName,
       traceId: `cron:${options.jobId}`,

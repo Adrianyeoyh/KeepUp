@@ -18,5 +18,15 @@ dist/
 apps/*/dist/
 packages/*/dist/
 
+# Backend build artifacts
+backend/*/dist/
+backend/*/*/dist/
+
+# Frontend build artifacts
+frontend/dist/
+
+# Turbo
+.turbo/
+
 # Logs
 *.log

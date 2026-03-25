@@ -20,6 +20,7 @@ export interface DbConfig {
  */
 export function initPool(config: DbConfig): pg.Pool {
   if (pool) {
+    dbLogger.warn('initPool() called but pool already exists — returning existing pool. Config differences are ignored.');
     return pool;
   }
 
@@ -79,9 +80,9 @@ export async function closePool(): Promise<void> {
 /**
  * Run a parameterized query with slow-query logging.
  */
-export async function query<T extends pg.QueryResultRow = any>(
+export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
   text: string,
-  params?: any[],
+  params?: unknown[],
 ): Promise<pg.QueryResult<T>> {
   const p = getPool();
   const start = Date.now();

@@ -1,6 +1,30 @@
 version: '3.8'
 
+# =============================================================================
+# FlowGuard — Full Platform Docker Compose
+# =============================================================================
+#
+# Infrastructure: postgres, redis
+# Gateway:        gateway (API gateway — auth, routing, rate limiting)
+# Publishers:     slack, jira, github (webhook ingest + outbound actions)
+# Consumers:      data-processor, digest, ledger, ai-engine, executor
+# Frontend:       React app
+#
+# Usage:
+#   docker compose up                     # Start everything
+#   docker compose up postgres redis      # Start infra only
+#   docker compose up gateway             # Start gateway + dependencies
+#
+# Dev mode (with hot reload):
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# =============================================================================
+
 services:
+
+  # ---------------------------------------------------------------------------
+  # Infrastructure
+  # ---------------------------------------------------------------------------
+
   postgres:
     image: postgres:16-alpine
     container_name: flowguard-postgres
@@ -19,6 +43,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - flowguard
 
   redis:
     image: redis:7-alpine
@@ -33,7 +59,273 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - flowguard
+
+  # ---------------------------------------------------------------------------
+  # API Gateway
+  # ---------------------------------------------------------------------------
+
+  gateway:
+    build:
+      context: ../backend/gateway
+      dockerfile: Dockerfile
+    container_name: flowguard-gateway
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+      DATABASE_URL: postgresql://flowguard:flowguard@postgres:5432/flowguard
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3001/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - flowguard
+
+  # ---------------------------------------------------------------------------
+  # Publishers (webhook ingest + outbound actions)
+  # ---------------------------------------------------------------------------
+
+  slack-publisher:
+    build:
+      context: ../backend/publishers/slack
+      dockerfile: Dockerfile
+    container_name: flowguard-slack-publisher
+    restart: unless-stopped
+    environment:
+      PORT: 3010
+      NODE_ENV: production
+      DATABASE_URL: postgresql://flowguard:flowguard@postgres:5432/flowguard
+      REDIS_URL: redis://redis:6379
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET:-}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_CLIENT_ID: ${SLACK_CLIENT_ID:-}
+      SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3010/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - flowguard
+
+  jira-publisher:
+    build:
+      context: ../backend/publishers/jira
+      dockerfile: Dockerfile
+    container_name: flowguard-jira-publisher
+    restart: unless-stopped
+    environment:
+      PORT: 3011
+      NODE_ENV: production
+      DATABASE_URL: postgresql://flowguard:flowguard@postgres:5432/flowguard
+      REDIS_URL: redis://redis:6379
+      JIRA_WEBHOOK_SECRET: ${JIRA_WEBHOOK_SECRET:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3011/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - flowguard
+
+  github-publisher:
+    build:
+      context: ../backend/publishers/github
+      dockerfile: Dockerfile
+    container_name: flowguard-github-publisher
+    restart: unless-stopped
+    environment:
+      PORT: 3012
+      NODE_ENV: production
+      DATABASE_URL: postgresql://flowguard:flowguard@postgres:5432/flowguard
+      REDIS_URL: redis://redis:6379
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_PRIVATE_KEY: ${GITHUB_PRIVATE_KEY:-}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3012/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - flowguard
+
+  # ---------------------------------------------------------------------------
+  # Consumers (domain processing microservices)
+  # ---------------------------------------------------------------------------
+
+  data-processor:
+    build:
+      context: ../backend/consumers/data-processor
+      dockerfile: Dockerfile
+    container_name: flowguard-data-processor
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://flowguard:flowguard@postgres:5432/flowguard
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3020/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - flowguard
+
+  digest:
+    build:
+      context: ../backend/consumers/digest
+      dockerfile: Dockerfile
+    container_name: flowguard-digest
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://flowguard:flowguard@postgres:5432/flowguard
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3021/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - flowguard
+
+  ledger:
+    build:
+      context: ../backend/consumers/ledger
+      dockerfile: Dockerfile
+    container_name: flowguard-ledger
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://flowguard:flowguard@postgres:5432/flowguard
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3022/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - flowguard
+
+  ai-engine:
+    build:
+      context: ../backend/consumers/ai-engine
+      dockerfile: Dockerfile
+    container_name: flowguard-ai-engine
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://flowguard:flowguard@postgres:5432/flowguard
+      REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3023/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - flowguard
+
+  executor:
+    build:
+      context: ../backend/consumers/executor
+      dockerfile: Dockerfile
+    container_name: flowguard-executor
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://flowguard:flowguard@postgres:5432/flowguard
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3024/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - flowguard
+
+  # ---------------------------------------------------------------------------
+  # Frontend
+  # ---------------------------------------------------------------------------
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: flowguard-frontend
+    restart: unless-stopped
+    ports:
+      - '5173:5173'
+    environment:
+      NODE_ENV: production
+      VITE_API_URL: http://gateway:3001
+    networks:
+      - flowguard
+
+# =============================================================================
+# Volumes & Networks
+# =============================================================================
 
 volumes:
   pgdata:
   redisdata:
+
+networks:
+  flowguard:
+    driver: bridge

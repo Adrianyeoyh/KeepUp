@@ -12,3 +12,5 @@ export {
   listCompanyIds,
 } from './client.js';
 export type { DbConfig } from './client.js';
+
+export { runMigrations } from './migrate.js';

@@ -1,0 +1,117 @@
+version: '3.8'
+
+# =============================================================================
+# FlowGuard — Dev Overrides (Hot Reload)
+# =============================================================================
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# What this adds:
+#   - Volume mounts for live source code (hot reload via tsx watch)
+#   - dev command overrides (tsx watch for backend, npm run dev for frontend)
+#   - NODE_ENV=development for all services
+#   - Additional debug ports where needed
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Gateway
+  # ---------------------------------------------------------------------------
+
+  gateway:
+    volumes:
+      - ../backend/gateway/src:/app/src
+      - ../backend/gateway/package.json:/app/package.json
+    command: npx tsx watch src/index.ts
+    environment:
+      NODE_ENV: development
+
+  # ---------------------------------------------------------------------------
+  # Publishers
+  # ---------------------------------------------------------------------------
+
+  slack-publisher:
+    volumes:
+      - ../backend/publishers/slack/src:/app/src
+      - ../backend/publishers/slack/package.json:/app/package.json
+    command: npx tsx watch src/index.ts
+    environment:
+      NODE_ENV: development
+
+  jira-publisher:
+    volumes:
+      - ../backend/publishers/jira/src:/app/src
+      - ../backend/publishers/jira/package.json:/app/package.json
+    command: npx tsx watch src/index.ts
+    environment:
+      NODE_ENV: development
+
+  github-publisher:
+    volumes:
+      - ../backend/publishers/github/src:/app/src
+      - ../backend/publishers/github/package.json:/app/package.json
+    command: npx tsx watch src/index.ts
+    environment:
+      NODE_ENV: development
+
+  # ---------------------------------------------------------------------------
+  # Consumers
+  # ---------------------------------------------------------------------------
+
+  data-processor:
+    volumes:
+      - ../backend/consumers/data-processor/src:/app/src
+      - ../backend/consumers/data-processor/package.json:/app/package.json
+    command: npx tsx watch src/index.ts
+    environment:
+      NODE_ENV: development
+
+  digest:
+    volumes:
+      - ../backend/consumers/digest/src:/app/src
+      - ../backend/consumers/digest/package.json:/app/package.json
+    command: npx tsx watch src/index.ts
+    environment:
+      NODE_ENV: development
+
+  ledger:
+    volumes:
+      - ../backend/consumers/ledger/src:/app/src
+      - ../backend/consumers/ledger/package.json:/app/package.json
+    command: npx tsx watch src/index.ts
+    environment:
+      NODE_ENV: development
+
+  ai-engine:
+    volumes:
+      - ../backend/consumers/ai-engine/src:/app/src
+      - ../backend/consumers/ai-engine/package.json:/app/package.json
+    command: npx tsx watch src/index.ts
+    environment:
+      NODE_ENV: development
+
+  executor:
+    volumes:
+      - ../backend/consumers/executor/src:/app/src
+      - ../backend/consumers/executor/package.json:/app/package.json
+    command: npx tsx watch src/index.ts
+    environment:
+      NODE_ENV: development
+
+  # ---------------------------------------------------------------------------
+  # Frontend
+  # ---------------------------------------------------------------------------
+
+  frontend:
+    volumes:
+      - ../frontend/src:/app/src
+      - ../frontend/public:/app/public
+      - ../frontend/index.html:/app/index.html
+      - ../frontend/vite.config.ts:/app/vite.config.ts
+      - ../frontend/tailwind.config.ts:/app/tailwind.config.ts
+      - ../frontend/package.json:/app/package.json
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      NODE_ENV: development
