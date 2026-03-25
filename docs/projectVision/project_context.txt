@@ -1,0 +1,1086 @@
+﻿FlowGuard — Project Vision & Build Document (Single Source of Reference)
+
+Audience: founders, product, engineering, AI agents, and external developers
+Purpose: one canonical document that connects all dots: problem → thesis → modules → AI/OpenClaw → architecture → MVP scope → roadmap → tech plan → expected outcomes
+Core principle: FlowGuard does not replace existing tools. It adds an intelligence + memory + remediation layer on top of them.
+
+0) One-Paragraph Summary
+
+FlowGuard is an Autonomous Operational Intelligence Layer for growing companies. It continuously observes how work actually flows across existing tools (Slack, Jira, GitHub, etc.), detects “process leaks” (delay, rework, misrouting, unresolved decisions), diagnoses root causes using AI, and then drafts fixes inside the tools teams already use. FlowGuard also prevents organizational memory decay by turning implied decisions and action items into durable “memory anchors” stored in a git-style ledger (append-only decision/action history), with links back to the original evidence. Execution is human-gated: FlowGuard can propose and preview changes, but only executes after explicit approval, with audit logging and rollback.
+
+1) The Problem (Pain Points We Solve)
+1.1 Symptoms (what companies feel)
+
+Work moves slower over time, but leaders can’t pinpoint why.
+
+Slack discussions spiral without resolution.
+
+Jira tickets reopen repeatedly.
+
+Approvals bottleneck at the same people.
+
+The same questions and debates repeat.
+
+Onboarding slows delivery because context is missing.
+
+1.2 Root causes (why it happens)
+
+No single source of truth (SoT)
+Decisions and context fragment across Slack, Jira, docs, and email.
+
+Action items are not logged
+Conversations end without a clear owner, due date, recorded outcome.
+
+Organizational memory decays with turnover
+People leave/join → mid-flight work lacks rationale → rework + drift.
+
+Cross-tool blind spots
+No system correlates Slack drift + Jira churn + GitHub bottlenecks end-to-end.
+
+1.3 The cost
+
+This creates invisible productivity loss:
+
+hours/week lost to re-explaining, re-deciding, reworking
+
+cycle time increases
+
+quality/rework increases
+
+execution becomes unpredictable
+
+FlowGuard’s job: make this cost measurable and reversible.
+
+2) Product Thesis (Sharp and Non-Negotiable)
+2.1 One-sentence thesis
+
+FlowGuard detects workflow drift across a company’s existing tools, captures missing decisions/action items that cause rework, and drafts (and optionally executes) fixes with gated human approval.
+
+2.2 What makes FlowGuard different
+
+Not a dashboard.
+
+Not a generic automation tool.
+
+Not another ticket system.
+
+Not an ops consultant.
+
+FlowGuard is:
+
+Observational (sees what actually happens)
+
+Diagnostic (explains why)
+
+Prescriptive (drafts fixes)
+
+Executable (applies fixes safely with approval)
+
+Closed loop (measures improvement)
+
+2.3 Scope guardrails (what we are NOT building)
+
+We are not building a replacement for Jira/Notion/Confluence.
+
+We are not promising “connect to every tool” in MVP.
+
+We are not full-autonomous by default.
+
+We are not employee surveillance: we focus on workflow, not policing individuals.
+
+3) Target Users & Buyer Personas
+Primary buyers/users
+
+CEO / Founder — wants visibility, leverage, ROI
+
+Head of Engineering — wants predictable delivery, less churn and rework
+
+Secondary users (later)
+
+Engineering managers
+
+Product ops / Biz ops
+
+Support engineering (if expanding to B wedge)
+
+4) Choosing the MVP Wedge (A vs B)
+
+You have two strong wedges:
+
+A) Slack + Jira + GitHub (product/engineering delivery)
+B) Slack + Zendesk + Jira (support → engineering escalation)
+
+Current recommendation for your persona mix (CEO + HoE)
+
+Start with A unless your first beta prospects are support-heavy.
+
+Reason (practical):
+
+A is more universal for SaaS startups
+
+cleaner event signals and ROI metrics
+
+less sensitive customer data early
+
+simpler to sell as “delivery velocity + rework reduction”
+
+Note: architecture will support both; wedge determines first connectors + first rules.
+
+5) Core Modules (The Product Broken Down)
+
+FlowGuard is intentionally built as three modules that reinforce one another.
+
+Module 1 — FlowGuard Leaks (Operational Drift Detection)
+
+Detect and quantify process leaks:
+
+decision drift (Slack)
+
+unresolved threads (Slack)
+
+rework/reopen/bounce (Jira)
+
+cycle time drift (Jira)
+
+review bottlenecks (GitHub)
+
+Key constraint: insight budget
+
+1–3 high-confidence insights/day max
+
+each with evidence + baseline + cost estimate + next step
+
+Module 2 — FlowGuard Memory (Institutional Memory / Source-of-Truth Index)
+
+Prevents organizational memory decay by capturing:
+
+Decision Records
+
+Action Items
+
+“Why trail” that links Slack ↔ Jira ↔ GitHub
+
+This is implemented as a git-style ledger (append-only history), not a new UI replacing existing tools.
+
+Module 3 — FlowGuard Remediation (Human-gated Execution)
+
+Closes the loop:
+
+drafts fixes
+
+shows previews (“diff”)
+
+requires approval
+
+executes via tool APIs
+
+logs everything and supports rollback
+
+6) The Git-Style “Source of Truth” (How It Works)
+6.1 Correct framing
+
+You are not building “the” source of truth.
+You are building a Truth Ledger + Index that provides auditability and continuity.
+
+6.2 Git primitives mapped to FlowGuard
+
+Commit = Memory Anchor (Decision Commit / Action Commit / Policy Commit)
+
+Branch = Alternative proposal / experiment / workaround
+
+Merge = Approved canonical truth (mainline)
+
+Diff = What changed, why it changed, and who approved it
+
+6.3 Why this solves your pain points
+
+People don’t log outcomes → FlowGuard drafts commits automatically
+
+Turnover breaks context → ledger preserves rationale + links
+
+No SoT → ledger indexes truth without replacing tools
+
+6.4 Minimal implementation (MVP)
+
+store commits in DB
+
+create/approve commits via Slack buttons
+
+write links back to Slack thread + Jira issue + PR
+
+No heavy UI required to start.
+
+7) Where AI and OpenClaw Fit (No Missing Pieces)
+
+FlowGuard is a hybrid system:
+
+deterministic pipelines for metrics and detection
+
+AI for diagnosis and drafting
+
+OpenClaw for skills + execution + guardrails
+
+7.1 What AI does (only two bounded roles in MVP)
+
+Diagnosis/Explanation
+Converts structured evidence into: root cause hypothesis + confidence + recommended fixes.
+
+Drafting
+Generates: summaries, decision commits, action items, template diffs, and remediation proposals.
+
+Important: AI is never free-running; it is bounded by policies and schemas.
+
+7.2 What OpenClaw does
+
+OpenClaw is the agent runtime:
+
+exposes “skills” (tool functions) for reading/writing across apps
+
+executes tool calls after approval
+
+enforces policy constraints (allowed actions, blast radius)
+
+provides repeatable skill registry, memory, orchestration
+
+Think:
+
+LLM = brain
+
+OpenClaw = hands + toolbelt + guardrails
+
+7.3 Tool calling and MCP (connector strategy)
+
+Use tool calling in the LLM for structured actions (create decision commit, propose template diff, etc.).
+
+Use MCP (or an internal connector SDK) so the system can expand to more tools without rewriting core logic.
+
+8) End-to-End Product Flow (Closed Loop)
+Step 1 — Observe
+
+Ingest events/metadata from tools (Slack/Jira/GitHub):
+
+timestamps, transitions, thread sizes, reopen counts, PR review times
+
+Step 2 — Detect
+
+Rule engine finds leaks:
+
+drift vs baseline
+
+threshold triggers (reopen rate, thread length)
+
+bounce patterns
+
+Step 3 — Diagnose (AI)
+
+AI Orchestrator packages evidence → LLM outputs:
+
+root cause hypothesis + confidence
+
+recommended fixes (ranked)
+
+missing memory anchors
+
+Step 4 — Draft Fix + Memory Anchors (AI)
+
+Draft:
+
+Decision Commit or Action Commit
+
+Jira template diff proposal
+
+Slack message summary + DRI request
+
+PR review policy suggestion
+
+Step 5 — Human Approval
+
+Approvals happen via:
+
+Slack interactive buttons (MVP)
+
+Web UI later
+
+Step 6 — Execute (OpenClaw Skills)
+
+If approved:
+
+post message / comment
+
+create action item or ticket
+
+update template (low blast radius first)
+
+log audit entry + rollback info
+
+Step 7 — Measure Improvement
+
+Metrics track:
+
+reopen rate
+
+cycle time
+
+decision latency
+
+PR review time
+
+Show “before vs after.”
+
+9) MVP Specification (for CEO + HoE, Wedge A)
+9.1 Deliverable
+
+Daily Slack DM Digest to CEO/HoE:
+
+max 3 insights/day
+
+each includes:
+
+evidence links
+
+baseline comparison
+
+cost estimate
+
+recommended fix
+
+buttons:
+
+Create Decision Commit
+
+Create Action Commit
+
+Propose Fix
+
+Approve Fix
+
+Snooze
+
+9.2 MVP integrations
+
+Slack
+
+Jira
+
+GitHub
+
+9.3 First 5 “Golden Leak Rules” (MVP)
+
+Decision Drift (Slack)
+
+Unlogged Action Items (Slack → Jira)
+
+Reopen/Bounce Spike (Jira)
+
+Cycle Time Drift (Jira)
+
+PR Review Bottleneck (GitHub)
+
+Each rule must produce:
+
+LeakInstance (severity, confidence, evidence)
+
+Fix drafts
+
+Optional memory commit drafts
+
+10) System Architecture (Developer Reference)
+10.1 Core services/components
+
+Connector Service
+
+Slack/Jira/GitHub webhooks & polling
+
+normalizes to internal Event schema
+
+Event Store (append-only)
+
+stores all normalized events
+
+Metrics Engine
+
+computes baselines and daily snapshots
+
+Leak Engine
+
+rule-based detection (v1)
+
+AI Orchestrator
+
+builds context package
+
+calls LLM (tool calling)
+
+validates schema output
+
+enforces policies (allowed tools, confidence thresholds)
+
+Remediation Service
+
+stores ProposedActions (diff previews)
+
+routes to approval
+
+Executor
+
+executes approved actions via OpenClaw skills
+
+logs audit + rollback
+
+10.2 Data model (minimum)
+
+Event
+
+MetricSnapshot
+
+LeakInstance
+
+LedgerCommit (decision/action/policy)
+
+ProposedAction / ExecutedAction (audit trail)
+
+11) Trust, Privacy, Safety Requirements (Non-Negotiable)
+Privacy posture
+
+metadata-first storage for Slack (content optional later, minimized/redacted)
+
+no “employee ranking”
+
+aggregated reporting
+
+Execution safety
+
+draft → preview → approve → execute
+
+audit log always
+
+rollback supported for any destructive changes
+
+blast-radius constraints (channel/project/field-level)
+
+Noise control
+
+insight budget hard limit
+
+confidence thresholds
+
+evidence links required
+
+12) Development Roadmap
+Phase 0 — Validation (1–2 weeks)
+
+founder/HoE interviews
+
+free diagnostic pilot
+
+Phase 1 — MVP (3–4 weeks)
+
+connectors + event store
+
+baselines + 5 rules
+
+Slack digest + buttons
+
+ledger commits + writebacks
+
+Phase 2 — Remediation v1 (4–6 weeks)
+
+proposed actions + approval flow
+
+low-risk execution + audit logs
+
+Phase 3 — Expand connectors and autonomy
+
+MCP/SDK connector expansion
+
+higher-impact actions (workflow/template enforcement)
+
+autopilot only after trust
+
+13) Success Criteria (What “Done” Means)
+MVP success (30–60 days)
+
+Prove improvement in one metric:
+
+Jira reopen rate ↓ OR
+
+cycle time ↓ OR
+
+decision latency ↓ OR
+
+PR review time ↓
+
+Adoption success
+
+daily digest remains enabled (low noise)
+
+at least 1 approved remediation/week
+
+decision/action commits used consistently
+
+14) Implementation Notes (How to build correctly)
+Avoid these traps
+
+building a dashboard first
+
+trying to integrate “all tools” early
+
+letting LLM outputs be unstructured
+
+shipping execution without gating/audit/rollback
+
+Build discipline
+
+strict schemas for AI outputs
+
+logs and observability everywhere
+
+permissions/roles designed early
+
+Decision: What to build first (Final instruction)
+
+Given your target users (CEO + Head of Engineering), and your desire for measurable ROI quickly:
+
+✅ Build Wedge A (Slack + Jira + GitHub) first.
+Design connectors so Wedge B becomes a later vertical expansion.
+
+Below is a developer-facing project document you can hand to other developers/AI agents. It reflects the full direction we converged on: FlowGuard = Operational Drift + Institutional Memory + (gated) Remediation, with a tight MVP wedge and strict trust/ROI constraints.
+I’ll also help you decide between A vs B in a way that works both as an investor and as a tech lead.
+________________
+
+
+FlowGuard Project Document
+Product: FlowGuard
+Tagline: Autonomous Operational Intelligence (Detect → Diagnose → Draft Fix → Human Approves → Execute → Measure)
+Status: MVP definition + implementation plan
+Primary Objective: Reduce invisible workflow friction and organizational memory decay in fast-growing teams without replacing existing tools.
+________________
+
+
+1) Executive Summary
+FlowGuard is an operational intelligence layer that:
+1. Observes how work moves across existing tools (Slack/Jira/GitHub or Slack/Zendesk/Jira).
+2. Detects drift/leaks (waiting, rework, misrouting, unresolved decisions).
+3. Diagnoses root causes with evidence-linked explanations (not vibes).
+4. Captures missing memory (decisions + action items that never get logged).
+5. Drafts fixes inside existing tools and optionally executes changes with human approval, full audit log, and rollback.
+This is not a dashboard. It’s a closed-loop operations co-pilot.
+________________
+
+
+2) Problem Statement (Pain Points)
+Core pain (what teams feel)
+* “We’re moving slower, but I can’t pinpoint why.”
+* “We keep repeating the same discussions.”
+* “Tickets get reopened and bounce around.”
+* “Decisions take forever; nobody owns the call.”
+* “When people leave/join, everything becomes inconsistent.”
+Root causes (what’s actually happening)
+1. No single source of truth (SoT)
+Decisions and context scatter across tools; documentation diverges.
+2. Action items not logged
+Conversations end without: owner, due date, recorded outcome → work falls through cracks.
+3. Organizational memory decay from turnover
+Mid-flight development becomes undocumented; new members re-interpret intent → drift + rework.
+4. Cross-tool fragmentation
+Slack may show decision drift, Jira shows rework, GitHub shows review bottlenecks—no one correlates end-to-end.
+________________
+
+
+3) Product Thesis
+One-sentence thesis
+FlowGuard detects workflow drift across a company’s existing tools, captures missing decisions/action items that cause rework, and drafts (and optionally executes) fixes with gated human approval.
+3 key claims
+   1. Drift is a scaling tax: growth + turnover increases fragmentation and rework.
+   2. Cross-system correlation is the differentiator (Slack + Work tracker + Code).
+   3. Moat = closed loop: draft fix + approval + safe execution + measurable ROI.
+Guardrails (what we are NOT building)
+   * Not a Jira/Notion/Confluence replacement UI.
+   * Not “connect to every tool” for MVP.
+   * Not full autonomy by default. Execution is opt-in and gated.
+________________
+
+
+4) Wedge Choice: A vs B (Investor + Tech Lead Decision)
+You’re stuck between:
+   * A: Slack + Jira + GitHub (product/engineering workflow)
+   * B: Slack + Zendesk + Jira (support→engineering handoff)
+My recommendation: Start with A unless your early users are support-heavy.
+Why (investor view):
+   * Bigger repeatable market (most SaaS teams have Slack + code + tracker).
+   * Cleaner ROI metrics (cycle time, reopen rate, PR review time).
+   * Less sensitive customer data than Zendesk (trust + compliance easier).
+Why (tech lead view):
+   * GitHub + Jira have well-defined event models (PR opened/merged, review requested; issue transitions, reopen).
+   * Easier to build strong detection with fewer ambiguous “support exceptions.”
+When you should choose B instead
+Choose B if:
+   * Your first 3–5 target teams have real pain in escalations (support drowning eng),
+   * They already buy tools for support operations,
+   * And you can sell “faster resolution time” clearly.
+Practical rule (no overthinking)
+   * If your initial beta prospects are product/engineering leaders → A
+   * If your initial beta prospects are support leaders / support engineering → B
+Implementation note: architect connectors so switching A↔B later is mostly adding a connector + a few rules, not rewriting the core.
+________________
+
+
+5) Core Product Modules
+Module 1: FlowGuard Leaks (Operational Drift)
+Detect and quantify friction patterns such as:
+   * Decision latency increasing (Slack)
+   * Threads growing with no resolution (Slack)
+   * Reopen rate / bounce patterns (Jira)
+   * Cycle time drift above baseline (Jira)
+   * PR review latency / stalled PRs (GitHub)
+Output principle: strict “insight budget”
+   * Max 1–3 insights/day
+   * Each insight must include:
+   * Evidence links
+   * Baseline comparison
+   * Cost estimate (hours/week)
+   * Recommended fix
+Module 2: FlowGuard Memory (Institutional Memory)
+Capture missing “company memory”:
+   * Decision Records (DRI, what/why, timestamp, links)
+   * Action items (owner, due date, status)
+   * “Why trail” across Slack ↔ Jira ↔ GitHub
+Important: this is an index/ledger, not a replacement doc system.
+FlowGuard points back to the original source.
+Module 3: FlowGuard Remediation (Human-gated Execution)
+When a leak is detected, FlowGuard:
+   1. Builds context (linked evidence)
+   2. Drafts a fix
+   3. Presents a change preview (“diff”)
+   4. Requires human approval
+   5. Executes with audit + rollback
+Start with low-risk actions, scale to higher-risk later.
+________________
+
+
+6) MVP Feature Set (Phase 1)
+MVP Deliverable: Daily Exec Digest + Fix Drafts
+Primary interface: Slack DM to CEO / Head of Eng (or Support Lead)
+Each day:
+   * 1–3 top leaks detected
+   * 1–2 missing memory anchors (decision/action items not logged)
+   * “Draft fix” + approve button
+MVP Integrations (choose one wedge)
+A: Slack + Jira + GitHub
+B: Slack + Zendesk + Jira
+MVP “Golden Rules” (example for A)
+Start with 5 rules only:
+   1. Decision Ownership Leak (Slack)
+   * Trigger: thread > N messages OR > T hours without resolution marker
+   * Diagnosis: missing DRI / decision protocol
+   * Fix draft: ask DRI + summary + decision record proposal
+   2. Unresolved Thread Drift (Slack)
+   * Trigger: thread inactive > T hours, no action item logged
+   * Fix: generate action items and owners
+   3. Requirement Ambiguity (Jira)
+   * Trigger: reopen rate > threshold OR frequent status bouncing
+   * Fix: draft acceptance criteria template + required fields
+   4. Cycle Time Drift (Jira)
+   * Trigger: cycle time +X% above baseline for project/team
+   * Fix: identify bottleneck state; propose SLA/reminder/approval change
+   5. PR Review Bottleneck (GitHub)
+   * Trigger: PR review time > baseline; PR stuck > T days
+   * Fix: ping reviewers, propose review rotation, flag overloaded reviewer
+MVP “Golden Rules” (example for B)
+   1. Zendesk escalations stuck > baseline
+   2. “Reopened” tickets spike
+   3. Handoff missing reproduction steps (template enforcement)
+   4. Jira rework after support escalation
+   5. Slack escalation threads unresolved > T hours
+________________
+
+
+7) System Architecture (Developer View)
+High-level pipeline
+Connectors → Event Store → Metrics/Baselines → Leak Engine → Insight Generator → Remediation Planner → Approval → Executor
+Core components
+   1. Connector Service(s)
+   * Pull events from each tool (webhooks + polling fallback)
+   * Normalize to internal Event schema
+   2. Event Store (append-only)
+   * Store raw normalized events; immutable
+   3. Normalization Layer
+   * Map events into domain entities:
+   * Conversation, WorkItem, PR, Decision, ActionItem, Person/Role, Link
+   4. Metrics Engine
+   * Daily aggregates + rolling baselines
+   * Generates MetricSnapshots
+   5. Leak Engine
+   * Rule-based detection (v1)
+   * Produces LeakInstances (type, severity, confidence, evidence)
+   6. Insight Generator
+   * Converts LeakInstance into a human-readable insight with links + fix draft
+   7. Remediation Service
+   * Creates ProposedActions (diff/preview)
+   * Routes to approval
+   8. Executor
+   * Applies approved actions
+   * Logs everything
+   * Supports rollback where possible
+________________
+
+
+8) Data Model (Minimum viable)
+Event (append-only)
+   * id (UUID)
+   * company_id
+   * source (slack/jira/github/zendesk)
+   * entity_id (thread id / issue id / PR id / ticket id)
+   * event_type
+   * timestamp
+   * metadata (JSON)
+MetricSnapshot
+   * company_id
+   * metric_name
+   * value
+   * date
+LeakInstance
+   * id
+   * company_id
+   * leak_type
+   * severity (0–100)
+   * confidence (0–1)
+   * detected_at
+   * evidence_links (JSON array)
+   * metrics_context (JSON)
+   * recommended_fix (text/JSON)
+DecisionRecord
+   * id
+   * company_id
+   * title
+   * decision
+   * rationale
+   * DRI
+   * created_at
+   * source_links (Slack/Jira/GitHub)
+   * status (draft/approved/published)
+ActionItem
+   * id
+   * company_id
+   * description
+   * owner
+   * due_date
+   * status
+   * source_links
+ProposedAction / ExecutedAction
+   * id
+   * company_id
+   * action_type
+   * target_system
+   * target_id
+   * preview_diff (JSON/text)
+   * requested_by (user id)
+   * approval_status
+   * approved_by
+   * executed_at
+   * rollback_info
+   * audit_log
+________________
+
+
+9) Trust, Safety, and Adoption Constraints
+This is where you win or die.
+Privacy posture (MVP)
+   * Default to metadata-only storage for Slack (no message content stored long-term).
+   * No “employee ranking” outputs.
+   * Aggregate/team-level insights.
+   * Transparent “what triggers what.”
+Insight budget (hard rule)
+   * 1–3 per day max
+   * Anything below confidence threshold is suppressed or goes to a weekly report.
+Execution gating (non-negotiable)
+   * Draft → Preview → Approve → Execute
+   * Audit log + rollback
+   * Blast radius limits (project/channel/field-level constraints)
+   * Permissions/role-based approvals
+________________
+
+
+10) Development Plan (How to build)
+Phase 0: Validation (7–10 days)
+   * 15–25 founder/lead interviews
+   * Sell “free 7-day diagnostic”
+   * Confirm: what metric they’d pay to improve (cycle time? reopen? resolution time?)
+Phase 1: MVP (3–4 weeks)
+   * Choose wedge A or B
+   * Build connectors + event store
+   * Build metrics engine + baselines
+   * Implement 5 golden leak rules
+   * Build Slack digest bot
+   * Implement DecisionRecord + ActionItem drafting (human confirm)
+Phase 2: Remediation v1 (4–6 weeks)
+   * ProposedAction system (diff previews)
+   * Approval workflow
+   * Execute low-risk actions:
+   * Slack reminders
+   * Jira comment/template suggestions
+   * GitHub reviewer pings
+   * Audit log
+Phase 3: Expand + hard actions (later)
+   * More connectors via standardized interface (MCP or internal SDK)
+   * Higher-blast actions:
+   * Modify templates/workflow rules
+   * Enforce required fields
+   * Automated SLA rules
+________________
+
+
+11) Tech Stack Recommendation
+Backend
+   * Node.js + TypeScript (Fastify/Express)
+   * PostgreSQL (core DB)
+   * spacetimedb for backend and server
+   * https://github.com/ClockworkLabs/SpacetimeDB
+   * Redis + BullMQ (jobs + scheduling)
+   * Docker for dev
+
+Integrations
+   * Slack Events API + Web API
+   * Jira REST APIs + Webhooks
+   * GitHub Webhooks + REST/GraphQL
+   * (Optional for B) Zendesk APIs + webhooks
+LLM
+   * Use tool-calling capable LLM
+   * Strict JSON schema for actions
+   * Store prompts/templates versioned
+   * Observability: log inputs/outputs for debugging (with privacy)
+Deployment
+   * Start: Render/Railway/Fly
+   * Move to AWS/GCP later if needed
+________________
+
+
+12) Expected Outcomes (What “success” looks like)
+MVP success criteria (30–60 days)
+You need proof of ROI on one metric:
+For A:
+   * Jira reopen rate ↓
+   * Cycle time ↓
+   * PR review time ↓
+   * Decision latency ↓
+For B:
+   * Escalation resolution time ↓
+   * Reopen rate ↓
+   * Handoff completeness ↑ (template compliance)
+   * Fewer “re-explanation loops”
+Adoption success criteria
+   * Execs keep daily digest on (low noise)
+   * Team uses decision/action capture prompts
+   * At least 1 approved remediation per week that sticks
+________________
+
+
+Final: Help deciding A vs B without getting stuck
+Here’s the simplest, developer-realistic plan:
+If you want the highest chance of shipping & proving ROI fast → Choose A
+Because:
+   * cleaner signals,
+   * less sensitive data,
+   * more universal,
+   * easier to sell to SaaS founders.
+If you already have warm access to support-heavy teams and can sell faster resolution → Choose B
+But expect:
+   * more edge cases,
+   * more compliance/privacy concern,
+   * more variance in workflow.
+My call as investor + tech lead: pick A for MVP unless your first beta users are clearly support-driven.
+________________
+
+
+Got it: you’re building for (1) CEO/Founder and (2) Head of Engineering. That’s actually perfect because they care about the same outcomes (speed + predictability), just at different zoom levels.
+And yes — your git-style idea stays, but you must implement it as a ledger/index, not a competing “new Jira.”
+Below is the add-on spec you can paste into your project doc.
+________________
+
+
+Buyer Personas: CEO + Head of Engineering
+What CEOs want
+   * “Are we slowing down? Why? What’s the cost?”
+   * “What one fix gives me the biggest leverage this week?”
+   * “Show me before/after improvement.”
+What Heads of Eng want
+   * “Where is work getting stuck and why?”
+   * “Where is rework coming from?”
+   * “How do we reduce decision churn and review bottlenecks without adding bureaucracy?”
+So your product output must map to:
+   * One executive narrative (3 bullets/day max)
+   * One engineering drill-down (evidence links + recommended change)
+________________
+
+
+The Git-Style Solution (Your “Source of Truth” Without Replacing Tools)
+The correct framing
+You’re not building “a new source of truth.”
+You’re building a:
+Truth Ledger + Index
+A git-like history and branching model for decisions, rationale, and action items, that points back to Slack/Jira/GitHub as the underlying sources.
+Why this works
+   * Teams already live in Slack/Jira/GitHub.
+   * Your value is: “Here’s what we decided, why, who owns it, and where the evidence is.”
+   * This survives turnover and reduces repeated conversations.
+________________
+
+
+Git primitives mapped to FlowGuard
+Commit = “Memory Anchor”
+A Decision Commit or Action Commit.
+Each commit contains:
+   * Summary (what changed / what was decided)
+   * Rationale (why)
+   * DRI (owner)
+   * Evidence links (Slack thread, Jira issue, PR, doc)
+   * Timestamp
+   * Tags (project/component)
+Branch = “Alternative proposal / evolving plan”
+   * “Option A vs Option B”
+   * “Experiment branch”
+   * “Incident workaround branch”
+   * “Architecture decision alternatives”
+Merge = “Approved & canonical”
+When CEO/Head of Eng approves, it becomes:
+   * Mainline truth
+   * Linked into Jira/Confluence/Notion (where relevant)
+Diff = “What changed since last week?”
+Show execs:
+   * decisions made
+   * scope changes
+   * ownership changes
+   * SLA changes
+________________
+
+
+Implementation (developer-realistic)
+Data model
+LedgerCommit
+   * commit_id (UUID)
+   * company_id
+   * commit_type: decision | action | policy | template_change
+   * title
+   * summary
+   * rationale
+   * DRI (user or role)
+   * status: draft | proposed | approved | merged
+   * branch_name (default: main)
+   * parent_commit_id(s)
+   * evidence_links: [{system, url, entity_id}]
+   * created_at
+Branch
+   * branch_name
+   * created_by
+   * created_at
+   * description
+   * base_commit_id
+MergeRequest
+   * mr_id
+   * from_branch
+   * to_branch (usually main)
+   * commits_included
+   * approvers
+   * approval_status
+   * executed_actions (links to remediation actions)
+UX rule
+You do not need a fancy UI first.
+For MVP:
+   * Create/approve “commits” inside Slack (buttons)
+   * Optional lightweight web page later for browsing the ledger
+________________
+
+
+MVP Output for CEO + Head of Eng
+Daily Slack DM format (max 3 items)
+Each item must contain:
+   * leak name
+   * cost estimate (hours/week)
+   * evidence links
+   * draft fix
+   * Create Memory Anchor button (Decision Commit / Action Commit)
+   * Approve Fix button (gated execution)
+Example message skeleton:
+🚨 Today’s top leaks (3 max)
+   1. Decision Drift (High) — est. 10–14 hrs/week lost
+Evidence: [Slack thread], [Jira epic]
+Draft fix: assign DRI + decision checklist
+Buttons: Create Decision Commit · Approve Reminder · Snooze
+   2. Rework Spike (Med) — Jira reopen rate 18% vs 10% baseline
+Evidence: [Jira board], [Top 5 reopened issues]
+Draft fix: enforce acceptance criteria template
+Buttons: Create Policy Commit · Propose Template Diff
+   3. PR Review Bottleneck (Med) — median review time +35%
+Evidence: [PR queue], [Reviewer load]
+Draft fix: review rotation + auto-ping
+Buttons: Approve Ping · Create Action Commit
+________________
+
+
+First 5 “Golden Leak Rules” (tuned to CEO + HoE)
+These are the only 5 you ship at first.
+1) Decision Drift in Slack
+Trigger: thread > N messages OR unresolved > T hours; decision keywords detected but no outcome logged
+Diagnosis: missing DRI / missing decision capture
+Draft fix: ask for DRI + propose Decision Commit
+Safe execution: post: “Who is DRI? Proposed summary: … Approve to log decision.”
+2) Unlogged Action Items
+Trigger: thread ends with implied tasks (“I’ll do X”, “let’s ship Y”) but no ticket/action created within 24h
+Diagnosis: action items falling through cracks
+Draft fix: generate Action Commits + owners + due date suggestions
+Safe execution: create Jira task only if approved OR post checklist message.
+3) Jira Reopen / Bounce Spike (Rework)
+Trigger: reopen rate > threshold OR status bounce > 2
+Diagnosis: ambiguity in requirements or acceptance criteria
+Draft fix: propose ticket template diff (required fields)
+Safe execution: comment suggestion + template draft; no workflow edits without approval.
+4) Cycle Time Drift (Throughput slowdown)
+Trigger: cycle time +X% vs baseline, bottleneck at same status (e.g., “In Review”, “QA”, “Blocked”)
+Diagnosis: approval bottleneck or capacity mismatch
+Draft fix: SLA reminders + clarify approval ownership
+Safe execution: add reminders / post weekly queue summary.
+5) PR Review Latency / Stalled PRs
+Trigger: PR open > T days OR review requested > baseline
+Diagnosis: reviewer overload, unclear ownership, missing review policy
+Draft fix: propose review rotation policy + auto-ping rules
+Safe execution: ping reviewers, suggest reassignment, create policy commit.
+________________
+
+
+How We Build the Git-Style Piece Into the Product (without scope explosion)
+Phase 1 (MVP)
+      * LedgerCommit objects in DB
+      * “Create Decision Commit” and “Create Action Commit” buttons in Slack
+      * Approvals: CEO/HoE click → commit becomes merged to main
+      * Link commit back into Slack thread + Jira issue as a comment
+Phase 2
+      * Branching for proposals (optional)
+      * “Merge Requests” for high-impact decisions (workflow changes, templates)
+      * Lightweight web view for browsing commits (“Why trail”)
+Phase 3
+      * Autopilot execution allowed only for approved policy commits, within blast-radius constraints
+________________
+
+
+Critical Call-Out (so you don’t mess this up)
+Your git-style system fails if you try to make people manually maintain it.
+So FlowGuard must:
+      * auto-suggest commits at the right moments
+      * make approval 1-click
+      * write back links into existing tools
+      * keep the ledger minimal and searchable
+The ledger is a memory spine, not another process.
+________________
+
+
+Next implementation step (no more indecision)
+Pick the wedge now based on your first users:
+      * If your first betas are CEO/HoE at SaaS startups → A (Slack + Jira + GitHub)
+      * If they’re support-heavy → B
+Since you said CEO + Head of Eng, the natural fit is A.
+If you want, I can append a build checklist with:
+      * exact events to ingest from Slack/Jira/GitHub
+      * DB migrations
+      * job schedules
+      * Slack bot interaction flows (buttons → endpoints → state transitions)
+      * and the approval/audit/rollback minimum you need for remediation.

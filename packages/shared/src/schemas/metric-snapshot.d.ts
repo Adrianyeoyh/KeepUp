@@ -1,0 +1,71 @@
+import { z } from 'zod';
+export declare const MetricNameSchema: z.ZodEnum<["slack.unresolved_threads", "slack.thread_length_median", "slack.thread_length_p90", "slack.response_gap_median", "slack.decision_keyword_threads", "jira.reopen_rate", "jira.cycle_time_median", "jira.cycle_time_p90", "jira.bounce_count", "jira.status_transition_count", "github.pr_review_latency_median", "github.pr_review_latency_p90", "github.pr_age_median", "github.stalled_prs", "github.reviewer_load_max"]>;
+export type MetricName = z.infer<typeof MetricNameSchema>;
+export declare const MetricScopeSchema: z.ZodEnum<["company", "team", "project", "channel", "repository"]>;
+export type MetricScope = z.infer<typeof MetricScopeSchema>;
+export declare const MetricSnapshotSchema: z.ZodObject<{
+    id: z.ZodString;
+    company_id: z.ZodString;
+    metric_name: z.ZodEnum<["slack.unresolved_threads", "slack.thread_length_median", "slack.thread_length_p90", "slack.response_gap_median", "slack.decision_keyword_threads", "jira.reopen_rate", "jira.cycle_time_median", "jira.cycle_time_p90", "jira.bounce_count", "jira.status_transition_count", "github.pr_review_latency_median", "github.pr_review_latency_p90", "github.pr_age_median", "github.stalled_prs", "github.reviewer_load_max"]>;
+    scope: z.ZodDefault<z.ZodEnum<["company", "team", "project", "channel", "repository"]>>;
+    scope_id: z.ZodOptional<z.ZodString>;
+    value: z.ZodNumber;
+    baseline_value: z.ZodOptional<z.ZodNumber>;
+    date: z.ZodDate;
+    metadata: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    created_at: z.ZodDate;
+}, "strip", z.ZodTypeAny, {
+    value: number;
+    id: string;
+    created_at: Date;
+    company_id: string;
+    metadata: Record<string, unknown>;
+    metric_name: "slack.unresolved_threads" | "slack.thread_length_median" | "slack.thread_length_p90" | "slack.response_gap_median" | "slack.decision_keyword_threads" | "jira.reopen_rate" | "jira.cycle_time_median" | "jira.cycle_time_p90" | "jira.bounce_count" | "jira.status_transition_count" | "github.pr_review_latency_median" | "github.pr_review_latency_p90" | "github.pr_age_median" | "github.stalled_prs" | "github.reviewer_load_max";
+    scope: "company" | "team" | "project" | "channel" | "repository";
+    date: Date;
+    scope_id?: string | undefined;
+    baseline_value?: number | undefined;
+}, {
+    value: number;
+    id: string;
+    created_at: Date;
+    company_id: string;
+    metric_name: "slack.unresolved_threads" | "slack.thread_length_median" | "slack.thread_length_p90" | "slack.response_gap_median" | "slack.decision_keyword_threads" | "jira.reopen_rate" | "jira.cycle_time_median" | "jira.cycle_time_p90" | "jira.bounce_count" | "jira.status_transition_count" | "github.pr_review_latency_median" | "github.pr_review_latency_p90" | "github.pr_age_median" | "github.stalled_prs" | "github.reviewer_load_max";
+    date: Date;
+    metadata?: Record<string, unknown> | undefined;
+    scope?: "company" | "team" | "project" | "channel" | "repository" | undefined;
+    scope_id?: string | undefined;
+    baseline_value?: number | undefined;
+}>;
+export type MetricSnapshot = z.infer<typeof MetricSnapshotSchema>;
+export declare const CreateMetricSnapshotSchema: z.ZodObject<Omit<{
+    id: z.ZodString;
+    company_id: z.ZodString;
+    metric_name: z.ZodEnum<["slack.unresolved_threads", "slack.thread_length_median", "slack.thread_length_p90", "slack.response_gap_median", "slack.decision_keyword_threads", "jira.reopen_rate", "jira.cycle_time_median", "jira.cycle_time_p90", "jira.bounce_count", "jira.status_transition_count", "github.pr_review_latency_median", "github.pr_review_latency_p90", "github.pr_age_median", "github.stalled_prs", "github.reviewer_load_max"]>;
+    scope: z.ZodDefault<z.ZodEnum<["company", "team", "project", "channel", "repository"]>>;
+    scope_id: z.ZodOptional<z.ZodString>;
+    value: z.ZodNumber;
+    baseline_value: z.ZodOptional<z.ZodNumber>;
+    date: z.ZodDate;
+    metadata: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    created_at: z.ZodDate;
+}, "id" | "created_at">, "strip", z.ZodTypeAny, {
+    value: number;
+    company_id: string;
+    metadata: Record<string, unknown>;
+    metric_name: "slack.unresolved_threads" | "slack.thread_length_median" | "slack.thread_length_p90" | "slack.response_gap_median" | "slack.decision_keyword_threads" | "jira.reopen_rate" | "jira.cycle_time_median" | "jira.cycle_time_p90" | "jira.bounce_count" | "jira.status_transition_count" | "github.pr_review_latency_median" | "github.pr_review_latency_p90" | "github.pr_age_median" | "github.stalled_prs" | "github.reviewer_load_max";
+    scope: "company" | "team" | "project" | "channel" | "repository";
+    date: Date;
+    scope_id?: string | undefined;
+    baseline_value?: number | undefined;
+}, {
+    value: number;
+    company_id: string;
+    metric_name: "slack.unresolved_threads" | "slack.thread_length_median" | "slack.thread_length_p90" | "slack.response_gap_median" | "slack.decision_keyword_threads" | "jira.reopen_rate" | "jira.cycle_time_median" | "jira.cycle_time_p90" | "jira.bounce_count" | "jira.status_transition_count" | "github.pr_review_latency_median" | "github.pr_review_latency_p90" | "github.pr_age_median" | "github.stalled_prs" | "github.reviewer_load_max";
+    date: Date;
+    metadata?: Record<string, unknown> | undefined;
+    scope?: "company" | "team" | "project" | "channel" | "repository" | undefined;
+    scope_id?: string | undefined;
+    baseline_value?: number | undefined;
+}>;
+export type CreateMetricSnapshot = z.infer<typeof CreateMetricSnapshotSchema>;

@@ -1,0 +1,173 @@
+import { z } from 'zod';
+export declare const CommitTypeSchema: z.ZodEnum<["decision", "action", "policy", "template_change"]>;
+export type CommitType = z.infer<typeof CommitTypeSchema>;
+export declare const CommitStatusSchema: z.ZodEnum<["draft", "proposed", "approved", "merged", "rejected"]>;
+export type CommitStatus = z.infer<typeof CommitStatusSchema>;
+export declare const LedgerCommitSchema: z.ZodObject<{
+    id: z.ZodString;
+    company_id: z.ZodString;
+    commit_type: z.ZodEnum<["decision", "action", "policy", "template_change"]>;
+    title: z.ZodString;
+    summary: z.ZodString;
+    rationale: z.ZodOptional<z.ZodString>;
+    dri: z.ZodOptional<z.ZodString>;
+    status: z.ZodDefault<z.ZodEnum<["draft", "proposed", "approved", "merged", "rejected"]>>;
+    branch_name: z.ZodDefault<z.ZodString>;
+    parent_commit_id: z.ZodOptional<z.ZodString>;
+    evidence_links: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        provider: z.ZodEnum<["slack", "jira", "github", "zendesk", "system"]>;
+        entity_type: z.ZodString;
+        entity_id: z.ZodString;
+        url: z.ZodString;
+        title: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        url: string;
+        provider: "slack" | "jira" | "github" | "zendesk" | "system";
+        entity_type: string;
+        entity_id: string;
+        title?: string | undefined;
+    }, {
+        url: string;
+        provider: "slack" | "jira" | "github" | "zendesk" | "system";
+        entity_type: string;
+        entity_id: string;
+        title?: string | undefined;
+    }>, "many">>;
+    tags: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
+    leak_instance_id: z.ZodOptional<z.ZodString>;
+    created_by: z.ZodOptional<z.ZodString>;
+    approved_by: z.ZodOptional<z.ZodString>;
+    approved_at: z.ZodOptional<z.ZodDate>;
+    created_at: z.ZodDate;
+    updated_at: z.ZodDate;
+}, "strip", z.ZodTypeAny, {
+    status: "draft" | "proposed" | "approved" | "merged" | "rejected";
+    id: string;
+    created_at: Date;
+    updated_at: Date;
+    company_id: string;
+    title: string;
+    evidence_links: {
+        url: string;
+        provider: "slack" | "jira" | "github" | "zendesk" | "system";
+        entity_type: string;
+        entity_id: string;
+        title?: string | undefined;
+    }[];
+    summary: string;
+    commit_type: "decision" | "action" | "policy" | "template_change";
+    branch_name: string;
+    tags: string[];
+    rationale?: string | undefined;
+    dri?: string | undefined;
+    parent_commit_id?: string | undefined;
+    leak_instance_id?: string | undefined;
+    created_by?: string | undefined;
+    approved_by?: string | undefined;
+    approved_at?: Date | undefined;
+}, {
+    id: string;
+    created_at: Date;
+    updated_at: Date;
+    company_id: string;
+    title: string;
+    summary: string;
+    commit_type: "decision" | "action" | "policy" | "template_change";
+    status?: "draft" | "proposed" | "approved" | "merged" | "rejected" | undefined;
+    evidence_links?: {
+        url: string;
+        provider: "slack" | "jira" | "github" | "zendesk" | "system";
+        entity_type: string;
+        entity_id: string;
+        title?: string | undefined;
+    }[] | undefined;
+    rationale?: string | undefined;
+    dri?: string | undefined;
+    branch_name?: string | undefined;
+    parent_commit_id?: string | undefined;
+    tags?: string[] | undefined;
+    leak_instance_id?: string | undefined;
+    created_by?: string | undefined;
+    approved_by?: string | undefined;
+    approved_at?: Date | undefined;
+}>;
+export type LedgerCommit = z.infer<typeof LedgerCommitSchema>;
+export declare const CreateLedgerCommitSchema: z.ZodObject<Omit<{
+    id: z.ZodString;
+    company_id: z.ZodString;
+    commit_type: z.ZodEnum<["decision", "action", "policy", "template_change"]>;
+    title: z.ZodString;
+    summary: z.ZodString;
+    rationale: z.ZodOptional<z.ZodString>;
+    dri: z.ZodOptional<z.ZodString>;
+    status: z.ZodDefault<z.ZodEnum<["draft", "proposed", "approved", "merged", "rejected"]>>;
+    branch_name: z.ZodDefault<z.ZodString>;
+    parent_commit_id: z.ZodOptional<z.ZodString>;
+    evidence_links: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        provider: z.ZodEnum<["slack", "jira", "github", "zendesk", "system"]>;
+        entity_type: z.ZodString;
+        entity_id: z.ZodString;
+        url: z.ZodString;
+        title: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        url: string;
+        provider: "slack" | "jira" | "github" | "zendesk" | "system";
+        entity_type: string;
+        entity_id: string;
+        title?: string | undefined;
+    }, {
+        url: string;
+        provider: "slack" | "jira" | "github" | "zendesk" | "system";
+        entity_type: string;
+        entity_id: string;
+        title?: string | undefined;
+    }>, "many">>;
+    tags: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
+    leak_instance_id: z.ZodOptional<z.ZodString>;
+    created_by: z.ZodOptional<z.ZodString>;
+    approved_by: z.ZodOptional<z.ZodString>;
+    approved_at: z.ZodOptional<z.ZodDate>;
+    created_at: z.ZodDate;
+    updated_at: z.ZodDate;
+}, "id" | "created_at" | "updated_at" | "approved_by" | "approved_at">, "strip", z.ZodTypeAny, {
+    status: "draft" | "proposed" | "approved" | "merged" | "rejected";
+    company_id: string;
+    title: string;
+    evidence_links: {
+        url: string;
+        provider: "slack" | "jira" | "github" | "zendesk" | "system";
+        entity_type: string;
+        entity_id: string;
+        title?: string | undefined;
+    }[];
+    summary: string;
+    commit_type: "decision" | "action" | "policy" | "template_change";
+    branch_name: string;
+    tags: string[];
+    rationale?: string | undefined;
+    dri?: string | undefined;
+    parent_commit_id?: string | undefined;
+    leak_instance_id?: string | undefined;
+    created_by?: string | undefined;
+}, {
+    company_id: string;
+    title: string;
+    summary: string;
+    commit_type: "decision" | "action" | "policy" | "template_change";
+    status?: "draft" | "proposed" | "approved" | "merged" | "rejected" | undefined;
+    evidence_links?: {
+        url: string;
+        provider: "slack" | "jira" | "github" | "zendesk" | "system";
+        entity_type: string;
+        entity_id: string;
+        title?: string | undefined;
+    }[] | undefined;
+    rationale?: string | undefined;
+    dri?: string | undefined;
+    branch_name?: string | undefined;
+    parent_commit_id?: string | undefined;
+    tags?: string[] | undefined;
+    leak_instance_id?: string | undefined;
+    created_by?: string | undefined;
+}>;
+export type CreateLedgerCommit = z.infer<typeof CreateLedgerCommitSchema>;

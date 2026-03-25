@@ -1,0 +1,398 @@
+FlowGuard — Implementation Overview (Phase 0 → Phase 2+)
+Last updated: 2026-03-04
+
+Purpose
+- Convert the vision/spec into an implementable backlog and engineering plan.
+- Keep the MVP narrow (Slack-first), measurable (ROI on 1 metric), and safe (human-gated execution with audit/rollback).
+
+Non-negotiables (treat as product requirements)
+- Do not replace existing tools (Slack/Jira/GitHub). FlowGuard layers on top.
+- Avoid dashboard-first thinking; ship an operational loop: Detect → Diagnose → Draft → Approve → Execute → Measure.
+- Strong noise control: cap to 1–3 high-confidence insights/day.
+- Strong safety: every execution is draft/preview/approve/execute with audit logging and rollback where possible.
+- Privacy posture: default to metadata-first for Slack; minimize long-term content storage.
+
+Glossary (implementation-friendly)
+- Connector: per-tool integration that ingests events + performs safe writebacks.
+- Event: normalized, append-only representation of tool activity.
+- MetricSnapshot: computed daily/rolling metrics + baselines used to detect drift.
+- LeakInstance: a detected “process leak” with severity/confidence and evidence links.
+- Insight: the human-facing representation (digest item) produced from LeakInstances.
+- Memory Anchor (LedgerCommit): append-only “commit” capturing a decision/action/policy with links to evidence.
+- ProposedAction: a draft remediation with a preview (diff) awaiting approval.
+- ExecutedAction: immutable audit record of an executed remediation + rollback metadata.
+
+========================================
+LOCKED MVP (WEDGE A)
+========================================
+
+MVP wedge + deliverable (locked)
+- Wedge A: Slack + Jira + GitHub
+- Deliverable: Daily Slack DM digest (max 3 insights/day) → draft fixes + 1-click approvals → optional low-risk execution.
+- Everything built must serve the loop: Detect → Diagnose → Draft → Approve → Execute → Measure.
+- Do NOT build a dashboard first; Slack is the UI in MVP.
+
+Repo + stack (target by end of Day 1)
+- Repo: monorepo
+  - apps/api (Node.js + TypeScript backend; can host Slack bot endpoints in MVP)
+  - apps/worker (aggregation, scheduling, retries, execution)
+  - apps/slack-bot (optional; fold into apps/api for MVP)
+  - packages/shared (types + zod schemas)
+  - infra/ (docker-compose for local Postgres + optional Redis)
+- Data stores:
+  - Postgres (required)
+  - Redis + BullMQ (optional; you can start ultra-lean with cron + Postgres advisory locks)
+- This repo currently contains a Vite marketing frontend; keep it marketing-only for now (optionally move to apps/web later).
+
+========================================
+PHASED FEATURE SET (BACKLOG)
+========================================
+
+Phase 0 — Validation (run in parallel; 1–2 weeks)
+Goal: confirm pricing signal + pick the single metric to improve first (while building Wedge A).
+- Recruit 15–25 founder/HoE interviews.
+- Offer a “free diagnostic” (manual or semi-automated) to capture: current baseline + pain.
+- Success signal: at least 3–5 teams willing to pilot with integrations enabled and a clear target metric.
+
+Phase 1 — MVP (Weeks 1–4)
+Primary deliverable: Daily Slack DM digest (max 3 insights/day) → draft fixes + 1-click approvals → optional execute low-risk actions.
+
+A) Integrations / Connectors (MVP scope)
+- Slack:
+  - Install + auth + token storage
+  - Event ingestion (metadata-first)
+  - MVP storage (default):
+    - channel_id + thread_ts
+    - timestamps (first_seen_at, last_seen_at)
+    - message_count
+    - resolved_marker_present (define a marker like ✅ or a /flowguard resolved command)
+    - Do not store message text by default; store content only if strictly required and minimize retention.
+  - DM digest delivery
+  - Interactive actions (buttons) for:
+    - Create Decision Commit
+    - Create Action Commit
+    - Propose Fix (draft only)
+    - Approve Fix (where applicable in Phase 1)
+    - Snooze
+- Jira:
+  - Auth + webhook/polling ingestion for issue lifecycle
+  - Read: issue metadata, transitions, reopen
+  - Writeback (low-blast): comments, create issue/task (only if approved)
+- GitHub:
+  - Auth + webhook ingestion for PR lifecycle
+  - Read: PR opened/updated, review requested/submitted, merge
+  - Writeback (low-blast): comments, review-request pings (only if approved)
+
+B) Data platform (MVP minimum)
+- Event Store (append-only):
+  - Store normalized events for all connectors.
+  - Ensure idempotency (dedupe by provider event id + workspace/org + timestamp window).
+- Normalization:
+  - Convert tool events into a single internal Event schema.
+  - Keep “evidence links” as first-class fields (URLs + provider IDs).
+- Metrics Engine:
+  - Daily aggregation jobs to compute MetricSnapshots and rolling baselines.
+  - Baselines should be per-scope (company → team/project) when feasible.
+
+C) Leak Engine (rule-based v1)
+Ship exactly 5 “Golden Leak Rules” (keep code extensible but scope fixed):
+- Slack decision drift / unresolved decision ownership
+- Slack implied actions not logged
+- Jira reopen/bounce spike (rework)
+- Jira cycle time drift vs baseline
+- GitHub PR review bottleneck vs baseline
+Each rule outputs:
+- LeakInstance {type, severity(0–100), confidence(0–1), detected_at}
+- evidence_links[] (Slack thread, Jira issue/board view, PR link)
+- metrics_context (baseline + current)
+- recommended_fix (structured draft plan)
+
+D) AI Orchestrator (bounded MVP)
+Use AI for two roles only:
+- Diagnosis: produce an evidence-linked root-cause hypothesis + confidence.
+- Drafting: generate text for digest, commit drafts, and safe remediation drafts.
+Implementation requirements:
+- Strict JSON schemas for AI outputs (validate before saving/sending).
+- Policy gating:
+  - suppress below-confidence outputs
+  - suppress if missing evidence links
+  - enforce insight budget (1–3/day)
+- Observability: store prompts + structured outputs in a redacted/debuggable way.
+
+E) Memory Ledger (git-style, MVP)
+- LedgerCommit storage and lifecycle:
+  - types: decision | action | policy | template_change (start with decision/action)
+  - states: draft → proposed → approved/merged
+  - must include: summary/decision, rationale, DRI/owner, evidence_links, timestamp
+- Slack buttons to create/approve commits.
+- Writeback: post links back into Slack threads and attach references to Jira/GitHub where relevant.
+
+F) Digest UX (Slack)
+Daily digest spec (hard constraints):
+- 1–3 insights/day
+- each insight includes: evidence links, baseline comparison, cost estimate (hours/week), recommended fix
+- each insight includes action buttons (memory + remediation draft)
+
+Phase 1 success criteria
+- Prove measurable improvement in at least 1 target metric in 30–60 days.
+- Adoption: digest stays enabled; at least 1 approved remediation/week (even if low-risk).
+
+Phase 2+ — Remediation expansion (post-Week 4; 4–6+ weeks)
+Goal: expand beyond low-blast execution once approvals/audit/rollback are proven.
+
+A) ProposedAction system
+- ProposedAction model:
+  - action_type (comment, reminder, create_task, template_suggestion, etc.)
+  - target_system + target_id
+  - preview_diff (human-readable + structured form)
+  - risk level + blast radius scope
+  - approval state machine (requested → approved/rejected → executed)
+- Slack-first approval flow (keep web UI optional until it provides real value).
+
+B) Executor (low-risk actions first)
+Start with actions that are safe and reversible:
+- Slack:
+  - post reminder message (or thread reply)
+  - post summary + DRI request
+  - add an internal “snoozed/ack” reaction (optional)
+- Jira:
+  - post comment with template/AC suggestion
+  - create a follow-up task (only with explicit approval)
+- GitHub:
+  - post reviewer ping/comment
+  - request review / reassign (only where policy allows)
+
+C) Audit + rollback
+- Every executed action produces an ExecutedAction record.
+- Capture enough rollback metadata to undo or mitigate (provider-dependent).
+- Immutable audit history for trust.
+
+D) Permissions / RBAC
+- Role-based approvals (exec vs eng manager vs admin).
+- Per-action blast radius constraints (channel/project/field-level).
+
+Phase 2+ success criteria
+- At least 1 approved remediation/week that “sticks” (sustained metric improvement).
+- Low noise: maintain daily insight cap without user fatigue.
+
+========================================
+REFERENCE ARCHITECTURE (SUGGESTED)
+========================================
+
+Note: This repository currently contains only a frontend marketing site. For Wedge A MVP, build the runtime system as a monorepo (apps/api + apps/worker + packages/shared + infra).
+
+Service decomposition (minimal-to-build)
+1) Core API Service (HTTP)
+- Receives connector webhooks
+- Serves admin/config endpoints
+- Hosts Slack interactive endpoints (actions, shortcuts)
+
+2) Worker / Scheduler
+- Polling fallback jobs
+- Daily metrics aggregation
+- Digest generation + delivery
+
+3) AI Orchestrator (can be a module in the API or a separate service)
+- Builds evidence packages
+- Calls LLM
+- Validates schema
+- Enforces confidence + policy gates
+
+4) Executor
+- Executes approved actions
+- Writes audit + rollback records
+
+Data stores
+- Postgres (primary DB) for: integrations, events, snapshots, leaks, ledger, approvals/audit.
+- Redis + BullMQ (optional) for: jobs, retries, rate-limit buffers. MVP can start without Redis using cron + Postgres advisory locks.
+
+========================================
+DATA MODEL (MINIMUM TABLES / ENTITIES)
+========================================
+
+Minimum tables (MVP)
+- companies
+- integrations (provider, installation info, token references)
+- events (append-only)
+- metric_snapshots
+- leak_instances
+- ledger_commits (Decision/Action)
+- proposed_actions (drafts + approvals state; preview payloads)
+- executed_actions (audit; include rollback metadata)
+
+Optional later
+- users (identity mapping per provider; can start as JSON inside integrations/events)
+- approvals (only if you do not embed approval fields into proposed_actions)
+- jobs / job_runs (operational visibility)
+- audit_log (if not fully covered by executed_actions)
+- ledger_branches / merge_requests (Phase 2+)
+
+Key implementation notes
+- Make events immutable; derive other state from events/snapshots.
+- Dedupe ingestion at the edge (idempotency keys).
+- Keep “evidence_links” structured (provider, entity_type, entity_id, url).
+- Don’t over-normalize early: prefer JSONB columns for provider payloads, evidence links, and preview diffs.
+
+========================================
+IMPLEMENTATION PLAN (ENGINEERING CHECKLIST)
+========================================
+
+Step 0 — Repo + skeleton (Day 1)
+- Create monorepo layout:
+  - apps/api, apps/worker, apps/slack-bot (optional), packages/shared, infra/
+- Stand up local infra:
+  - Postgres in docker-compose
+  - (Optional) Redis if using BullMQ
+- Establish shared runtime contracts in packages/shared:
+  - zod schemas for Event, MetricSnapshot, LeakInstance, LedgerCommit, ProposedAction, ExecutedAction, DigestItem
+  - strict JSON validation for anything “AI-produced”
+
+Step 1 — Data layer first (Day 1–2)
+- Create migrations for the minimum tables:
+  - companies
+  - integrations
+  - events (append-only)
+  - metric_snapshots
+  - leak_instances
+  - ledger_commits (Decision/Action)
+  - proposed_actions
+  - executed_actions
+- Keep it simple:
+  - avoid over-normalization
+  - use JSONB for provider payloads, evidence links, recommended fixes, and preview diffs
+  - enforce idempotency (unique keys on provider_event_id + provider_scope where possible)
+
+Step 2 — Slack integration (Day 2–4)
+- OAuth install (Slack app) + token storage
+- Event ingestion (metadata-first) for message/thread activity
+- Bot DM capability (this is the MVP UI)
+- Interactive actions (buttons):
+  - Approve
+  - Snooze
+  - Create Decision Commit
+  - (Optional) Create Action Commit
+- Keep Slack storage ultra-lean (default):
+  - thread_ts, channel_id, timestamps, message_count, resolved_marker_present
+
+Step 3 — Jira integration (Day 4–6)
+- OAuth/token storage (Jira Cloud auth)
+- Polling/webhooks for:
+  - issue created/updated
+  - status transitions
+  - reopen events
+- Store normalized events (append-only)
+
+Step 4 — GitHub integration (Day 6–7)
+- GitHub App + webhook ingestion for:
+  - PR opened
+  - review requested/submitted
+  - PR merged/closed
+- Store normalized events (append-only)
+
+Step 5 — Metrics + baselines worker (Week 2)
+- Daily job to aggregate per-company metrics:
+  - Slack: thread length distribution, unresolved threads > T, median response gap
+  - Jira: reopen rate, cycle time (approx), bounce count
+  - GitHub: PR age, review latency
+- Baselines:
+  - rolling 14–28 day baseline per metric
+  - store in metric_snapshots
+
+Step 6 — Leak engine (Week 2)
+- Implement deterministic, rule-based detectors (hardcoded first; config later)
+- Output to leak_instances:
+  - type, severity, confidence, evidence_links (URLs), metric deltas vs baseline
+  - recommended_fix placeholders (structured)
+
+Step 7 — AI orchestrator (Week 3)
+- Add AI only after structured leaks exist
+- Input:
+  - leak_instance + evidence metadata
+  - allowed action policy
+- Output: strict schema-validated JSON (zod)
+  - explanation
+  - 1–3 fix drafts
+  - optional ledger_commit draft
+  - optional proposed_action draft
+
+Step 8 — Daily digest + approvals (Week 3)
+- Daily scheduled job:
+  - pick top 3 leaks by severity/confidence
+  - send Slack DM to CEO/HoE
+  - include buttons: Approve reminder, Create Decision Commit, Propose template diff, Snooze
+- Button handling:
+  - create proposed_actions or ledger_commits
+  - show preview back in Slack before execution
+
+Step 9 — Execution v1 (Week 4)
+- Low-blast actions only (approval gated):
+  - post Slack reminder message
+  - add Jira comment (template suggestion)
+  - ping PR reviewers (GitHub comment)
+- Every execution must create an executed_actions record (audit + rollback metadata where possible)
+
+This week (concrete checklist)
+- Today: monorepo + Postgres in docker + migrations for companies/events/leak_instances
+- Next 2 days: Slack OAuth install + bot can DM you + store Slack thread metadata events
+- End of week: Jira ingestion (polling is fine) + first leak rule (“thread > 30 messages and unresolved > 48h”) + daily DM reporting it
+
+After Week 4 (Phase 2+ remediation expansion)
+- Expand actions beyond low-blast (templates, workflow changes) only after audit/rollback + approval UX is proven.
+
+========================================
+WHERE OPENCLAW FITS
+========================================
+
+- Don’t introduce OpenClaw on Day 1.
+- MVP: implement tools as internal functions (postSlack, commentJira, commentGitHub) behind approval gates.
+- Phase 2: wrap those functions as OpenClaw skills so the LLM can plan + call them (still approval gated).
+
+========================================
+TESTING & QUALITY
+========================================
+
+Unit tests
+- Leak rules (inputs → LeakInstance outputs)
+- Metrics/baselines
+- Policy gates (budget, confidence, evidence-required)
+
+Integration tests
+- Connector adapters (mock provider payloads)
+- Slack interactive flows (button click → ack → state transition)
+
+Operational testing
+- Rate limit handling + retries
+- Idempotency (replayed webhooks)
+- Backfills (recompute snapshots safely)
+
+========================================
+FRONTEND (THIS REPO) — ALIGNMENT & FUTURE-PROOFING
+========================================
+
+Current state
+- This frontend is a landing page that explains the product modules, golden rules, digest preview, ledger concept, personas, and trust posture.
+- It aligns well with the MVP being Slack-first (digest + buttons + approvals), with Phase 2+ expanding remediation/execution depth.
+
+Recommended future frontend additions (Phase 2+)
+- Add a separate /app route group for optional web UI:
+  - Ledger browser (commits, evidence links)
+  - Approvals queue (ProposedActions)
+  - Insight history (suppressed vs delivered)
+  - Settings (integration status, insight budget, thresholds)
+- Keep marketing page and app UI separate via layouts.
+- Use runtime validation (zod) for API responses.
+- Keep audit/rollback transparency visible in any UI surface.
+
+========================================
+OPEN QUESTIONS / DECISIONS TO LOCK
+========================================
+
+- Confirm MVP stays Wedge A only (Slack + Jira + GitHub) until the loop is stable.
+- Decide whether to use Redis + BullMQ in Week 1 or start ultra-lean with cron + Postgres advisory locks.
+- Decide whether to keep the marketing frontend separate or move it into the monorepo as apps/web.
+- Decide data storage policy for Slack message content (metadata-only default; content only if necessary and minimized).
+- Define the “resolved marker” (✅ reaction vs /flowguard resolved command) and its detection rules.
+- Define initial confidence thresholds and suppression behavior.
+- Decide how/where ledger commits are browsed in Phase 1 (Slack-only vs minimal web view).
+
+End of document.

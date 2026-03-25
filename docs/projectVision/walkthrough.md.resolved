@@ -1,0 +1,132 @@
+# FlowGuard — Session Walkthrough (Updated)
+
+## What Was Done
+
+### 1. Seed Script Fixes
+- Fixed 2 TEXT[] array format bugs in [seed-dev.ts](file:///Users/adrianyeo/FlowGuard/scripts/seed-dev.ts) (`scopes`, `tags`) — pg driver handles JS arrays natively
+- Seed now populates: **1 company, 3 integrations, 85 events, 84 metrics, 5 leaks, 4 commits, 3 actions, 1 execution**
+
+### 2. New Dashboard API Routes
+Added 5 missing endpoints to [dashboard-api.ts](file:///Users/adrianyeo/FlowGuard/apps/api/src/routes/dashboard-api.ts):
+
+| Route | Purpose |
+|---|---|
+| `GET /api/overview` | Summary stats (leaks, events, integrations) |
+| `GET /api/events` | Paginated event feed with source filter |
+| `GET /api/executions` | Execution history with rollback info |
+| `GET /api/integrations` | Active integrations list |
+| `POST /api/executions/:id/rollback` | Trigger rollback from dashboard |
+
+### 3. All 13 Endpoints Pass ✅
+
+```
+✅ [200] Health
+✅ [200] Overview              — company, 5 leaks, 36 events, 3 integrations
+✅ [200] Leaks                 — 5 leak instances with severity/confidence
+✅ [200] Metrics               — 84 snapshots across 6 metric types
+✅ [200] Ledger                — 4 commits (draft/proposed/approved/merged)
+✅ [200] Approvals             — 3 proposed actions (pending/approved)
+✅ [200] Executions            — 1 executed action with rollback data
+✅ [200] Events                — 36 recent events (slack/jira/github)
+✅ [200] Integrations          — 3 providers (slack, jira, github)
+✅ [200] Settings              — Company config with digest settings
+✅ [401] Auth Rejected (no key) — Correctly blocked
+✅ [401] Auth Rejected (wrong)  — Correctly blocked
+✅ [200] CORS (localhost:5173)  — Allowed with headers
+```
+
+---
+
+## Connecting Real Integrations
+
+### 🔵 Slack Setup
+
+1. **Go to** [api.slack.com/apps](https://api.slack.com/apps) → **Create New App** → **From scratch**
+2. **Name**: `FlowGuard` → select your workspace
+3. **OAuth & Permissions** → Add these **Bot Token Scopes**:
+   - `channels:history`, `channels:read`, `chat:write`, `reactions:read`, `users:read`
+4. **Event Subscriptions** → Enable → Set Request URL:
+   - `https://<your-tunnel-url>/webhooks/slack/events`
+   - Subscribe to: `message.channels`, `reaction_added`, `reaction_removed`
+5. **Interactivity** → Enable → Request URL: `https://<your-tunnel-url>/webhooks/slack/actions`
+6. **Install to Workspace** → Copy **Bot Token** and **Signing Secret**
+7. **Update [.env](file:///Users/adrianyeo/FlowGuard/.env)**:
+   ```
+   SLACK_BOT_TOKEN=xoxb-your-bot-token
+   SLACK_SIGNING_SECRET=your-signing-secret
+   SLACK_CLIENT_ID=your-client-id
+   SLACK_CLIENT_SECRET=your-client-secret
+   ```
+
+### 🟢 Jira Setup
+
+1. **Go to** [developer.atlassian.com/console/myapps](https://developer.atlassian.com/console/myapps/)
+2. **Create** → OAuth 2.0 integration → Name: `FlowGuard`
+3. **Permissions** → Jira → Add `read:jira-work`, `write:jira-work`
+4. **Settings** → Callback URL: `https://<your-tunnel-url>/webhooks/jira/oauth/callback`
+5. **Webhooks** → Create webhook at your Jira admin:
+   - URL: `https://<your-tunnel-url>/webhooks/jira`
+   - Events: `jira:issue_created`, `jira:issue_updated`
+   - Generate a **webhook secret** and add to [.env](file:///Users/adrianyeo/FlowGuard/.env):
+   ```
+   JIRA_WEBHOOK_SECRET=your-jira-webhook-secret
+   JIRA_CLOUD_ID=your-cloud-id
+   JIRA_BASE_URL=https://your-org.atlassian.net
+   ```
+
+### 🟡 GitHub Setup
+
+1. **Go to** GitHub → Settings → Developer Settings → **GitHub Apps** → New
+2. **Name**: `FlowGuard`, **Homepage**: `http://localhost:5173`
+3. **Webhook URL**: `https://<your-tunnel-url>/webhooks/github`
+4. **Webhook secret**: Generate one, add to [.env](file:///Users/adrianyeo/FlowGuard/.env) as `GITHUB_WEBHOOK_SECRET`
+5. **Permissions**:
+   - Repository: Pull requests (Read & Write), Issues (Read & Write)
+   - Subscribe to: `pull_request`, `pull_request_review`, `issues`
+6. **Generate private key** → Save as `github-private-key.pem`
+7. **Update [.env](file:///Users/adrianyeo/FlowGuard/.env)**:
+   ```
+   GITHUB_APP_ID=your-app-id
+   GITHUB_WEBHOOK_SECRET=your-webhook-secret
+   GITHUB_PRIVATE_KEY_PATH=./github-private-key.pem
+   ```
+
+### 🚀 Getting the Tunnel URL
+
+Run the tunnel script to get a public URL for your webhooks:
+```bash
+npm run tunnel
+```
+This starts a `cloudflared` tunnel and outputs a URL like `https://abc-xyz.trycloudflare.com`.
+Use this URL in the webhook configurations above.
+
+> **Note**: The URL changes each time you restart the tunnel (free tier). The tunnel script auto-updates Slack/GitHub webhook URLs if you add `SLACK_APP_CONFIG_TOKEN`, `SLACK_APP_ID` to [.env](file:///Users/adrianyeo/FlowGuard/.env).
+
+---
+
+## Simulating Features End-to-End
+
+### Simulate a Leak Detection
+1. In your connected Slack workspace, post several messages in a channel thread without assigning a DRI or resolving with ✅
+2. The leak engine will detect `dangling_thread` after the digest job runs
+3. Check: `curl -H "x-api-key: $ADMIN_API_KEY" http://localhost:3001/api/leaks`
+
+### Simulate an Action Approval
+1. Find a pending action: `curl -H "x-api-key: $ADMIN_API_KEY" http://localhost:3001/api/approvals`
+2. Approve it:
+   ```bash
+   curl -X POST -H "x-api-key: $ADMIN_API_KEY" -H "Content-Type: application/json" \
+     -d '{"action":"approve","actor":"adrian"}' \
+     http://localhost:3001/api/approvals/<action-id>/action
+   ```
+
+### Simulate a Ledger Commit
+The ledger auto-creates commits when leaks are diagnosed. You can also create manually via the API or dashboard.
+
+### Test Rollback
+After an action is executed:
+```bash
+curl -X POST -H "x-api-key: $ADMIN_API_KEY" -H "Content-Type: application/json" \
+  -d '{"actor":"adrian"}' \
+  http://localhost:3001/api/executions/<execution-id>/rollback
+```

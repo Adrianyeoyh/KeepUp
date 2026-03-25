@@ -1,0 +1,22 @@
+node_modules
+dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+.key*
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Build artifacts
+apps/*/dist/
+packages/*/dist/
+
+# Logs
+*.log
